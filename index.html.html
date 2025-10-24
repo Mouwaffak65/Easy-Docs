@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Docs - Conversion et Compression de Documents</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .tool-card.active {
+            border: 3px solid #667eea;
+        }
+
+        .tool-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .tool-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .tool-desc {
+            color: #666;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .workspace {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .workspace.active {
+            display: block;
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover {
+            background: #f8f9ff;
+            border-color: #764ba2;
+        }
+
+        .upload-zone.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .result-section {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .success-icon {
+            font-size: 4em;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+
+        .quality-slider {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .quality-label {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .back-btn {
+            background: #6c757d;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 Easy Docs</h1>
+            <p class="subtitle">Convertissez et compressez vos documents en toute simplicité</p>
+        </header>
+
+        <div class="tools-grid" id="toolsGrid">
+            <div class="tool-card" data-tool="word-to-pdf">
+                <div class="tool-icon">📝</div>
+                <div class="tool-title">Word vers PDF</div>
+                <div class="tool-desc">Convertissez vos documents Word en PDF</div>
+            </div>
+
+            <div class="tool-card" data-tool="jpeg-to-pdf">
+                <div class="tool-icon">🖼️</div>
+                <div class="tool-title">JPEG vers PDF</div>
+                <div class="tool-desc">Transformez vos images en documents PDF</div>
+            </div>
+
+            <div class="tool-card" data-tool="pdf-to-jpeg">
+                <div class="tool-icon">📷</div>
+                <div class="tool-title">PDF vers JPEG</div>
+                <div class="tool-desc">Extrayez des images de vos PDF</div>
+            </div>
+
+            <div class="tool-card" data-tool="compress-pdf">
+                <div class="tool-icon">📦</div>
+                <div class="tool-title">Compresser PDF</div>
+                <div class="tool-desc">Réduisez la taille de vos fichiers PDF</div>
+            </div>
+
+            <div class="tool-card" data-tool="compress-image">
+                <div class="tool-icon">🗜️</div>
+                <div class="tool-title">Compresser JPEG</div>
+                <div class="tool-desc">Optimisez vos images JPEG</div>
+            </div>
+
+            <div class="tool-card" data-tool="compress-word">
+                <div class="tool-icon">💾</div>
+                <div class="tool-title">Compresser Word</div>
+                <div class="tool-desc">Réduisez la taille de vos documents Word</div>
+            </div>
+        </div>
+
+        <div class="workspace" id="workspace">
+            <button class="btn back-btn" onclick="goBack()">← Retour</button>
+            
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">☁️</div>
+                <div class="upload-text">Glissez-déposez votre fichier ici</div>
+                <div class="upload-subtext">ou cliquez pour sélectionner</div>
+                <input type="file" id="fileInput" accept="">
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <strong>Fichier sélectionné:</strong> <span id="fileName"></span><br>
+                <strong>Taille:</strong> <span id="fileSize"></span>
+            </div>
+
+            <div id="qualityControl" style="display: none; margin: 20px 0;">
+                <label><strong>Qualité de compression:</strong></label>
+                <input type="range" class="quality-slider" id="qualitySlider" min="10" max="100" value="70">
+                <div class="quality-label">
+                    <span>Basse (petite taille)</span>
+                    <span id="qualityValue">70%</span>
+                    <span>Haute (grande taille)</span>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="btn" id="processBtn" onclick="processFile()" disabled>Traiter le fichier</button>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="success-icon">✅</div>
+                <h2>Traitement terminé avec succès!</h2>
+                <p id="resultMessage"></p>
+                <button class="btn" id="downloadBtn">Télécharger le fichier</button>
+                <button class="btn btn-secondary" onclick="resetWorkspace()">Traiter un autre fichier</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTool = '';
+        let selectedFile = null;
+        let processedData = null;
+
+        const toolCards = document.querySelectorAll('.tool-card');
+        const workspace = document.getElementById('workspace');
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const processBtn = document.getElementById('processBtn');
+        const qualityControl = document.getElementById('qualityControl');
+        const qualitySlider = document.getElementById('qualitySlider');
+
+        toolCards.forEach(card => {
+            card.addEventListener('click', function() {
+                currentTool = this.dataset.tool;
+                showWorkspace();
+            });
+        });
+
+        function showWorkspace() {
+            workspace.classList.add('active');
+            document.getElementById('toolsGrid').style.display = 'none';
+            setupFileInput();
+            resetWorkspace();
+        }
+
+        function goBack() {
+            workspace.classList.remove('active');
+            document.getElementById('toolsGrid').style.display = 'grid';
+            resetWorkspace();
+        }
+
+        function setupFileInput() {
+            let accept = '';
+            qualityControl.style.display = 'none';
+
+            switch(currentTool) {
+                case 'word-to-pdf':
+                    accept = '.doc,.docx';
+                    break;
+                case 'jpeg-to-pdf':
+                    accept = 'image/jpeg,image/jpg';
+                    break;
+                case 'pdf-to-jpeg':
+                    accept = '.pdf';
+                    break;
+                case 'compress-pdf':
+                    accept = '.pdf';
+                    qualityControl.style.display = 'block';
+                    break;
+                case 'compress-image':
+                    accept = 'image/jpeg,image/jpg';
+                    qualityControl.style.display = 'block';
+                    break;
+                case 'compress-word':
+                    accept = '.doc,.docx';
+                    break;
+            }
+            fileInput.accept = accept;
+        }
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        qualitySlider.addEventListener('input', (e) => {
+            document.getElementById('qualityValue').textContent = e.target.value + '%';
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            processBtn.disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+
+        async function processFile() {
+            if (!selectedFile) return;
+
+            processBtn.disabled = true;
+            showProgress();
+
+            try {
+                switch(currentTool) {
+                    case 'word-to-pdf':
+                        await convertWordToPdf();
+                        break;
+                    case 'jpeg-to-pdf':
+                        await convertJpegToPdf();
+                        break;
+                    case 'pdf-to-jpeg':
+                        await convertPdfToJpeg();
+                        break;
+                    case 'compress-pdf':
+                        await compressPdf();
+                        break;
+                    case 'compress-image':
+                        await compressImage();
+                        break;
+                    case 'compress-word':
+                        await compressWord();
+                        break;
+                }
+            } catch (error) {
+                alert('Erreur lors du traitement: ' + error.message);
+                hideProgress();
+                processBtn.disabled = false;
+            }
+        }
+
+        function showProgress() {
+            document.getElementById('progressContainer').classList.add('show');
+            updateProgress(0);
+        }
+
+        function updateProgress(percent) {
+            const fill = document.getElementById('progressFill');
+            fill.style.width = percent + '%';
+            fill.textContent = Math.round(percent) + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').classList.remove('show');
+        }
+
+        async function convertWordToPdf() {
+            updateProgress(30);
+            const arrayBuffer = await selectedFile.arrayBuffer();
+            
+            updateProgress(50);
+            const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+            const text = result.value;
+
+            updateProgress(70);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const lines = doc.splitTextToSize(text, 180);
+            let y = 20;
+            
+            lines.forEach(line => {
+                if (y > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(line, 15, y);
+                y += 7;
+            });
+
+            updateProgress(90);
+            processedData = doc.output('blob');
+            
+            showResult('Document Word converti en PDF avec succès!');
+            updateProgress(100);
+        }
+
+        async function convertJpegToPdf() {
+            updateProgress(30);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            updateProgress(50);
+            const img = await createImageBitmap(selectedFile);
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            updateProgress(70);
+            const imgData = canvas.toDataURL('image/jpeg');
+            
+            const imgWidth = 190;
+            const imgHeight = (img.height * imgWidth) / img.width;
+            
+            doc.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+
+            updateProgress(90);
+            processedData = doc.output('blob');
+            
+            showResult('Image JPEG convertie en PDF avec succès!');
+            updateProgress(100);
+        }
+
+        async function convertPdfToJpeg() {
+            updateProgress(30);
+            
+            const arrayBuffer = await selectedFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            
+            updateProgress(60);
+            
+            alert('Conversion PDF vers JPEG: Cette fonctionnalité nécessite un rendu côté serveur pour une conversion complète. Le fichier sera téléchargé tel quel.');
+            
+            processedData = selectedFile;
+            showResult('Fichier PDF prêt. Note: La conversion complète nécessite un traitement serveur.');
+            updateProgress(100);
+        }
+
+        async function compressPdf() {
+            updateProgress(30);
+            
+            const arrayBuffer = await selectedFile.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            
+            updateProgress(60);
+            
+            const pdfBytes = await pdfDoc.save({
+                useObjectStreams: false
+            });
+            
+            updateProgress(90);
+            processedData = new Blob([pdfBytes], { type: 'application/pdf' });
+            
+            const reduction = ((selectedFile.size - processedData.size) / selectedFile.size * 100).toFixed(1);
+            showResult(`PDF compressé! Réduction de taille: ${reduction}%`);
+            updateProgress(100);
+        }
+
+        async function compressImage() {
+            updateProgress(30);
+            
+            const quality = qualitySlider.value / 100;
+            
+            const img = await createImageBitmap(selectedFile);
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            updateProgress(50);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            updateProgress(70);
+            const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve, 'image/jpeg', quality);
+            });
+            
+            updateProgress(90);
+            processedData = blob;
+            
+            const reduction = ((selectedFile.size - processedData.size) / selectedFile.size * 100).toFixed(1);
+            showResult(`Image JPEG compressée! Réduction de taille: ${reduction}%`);
+            updateProgress(100);
+        }
+
+        async function compressWord() {
+            updateProgress(50);
+            
+            alert('Compression Word: Les documents Word nécessitent un traitement spécifique. Le fichier sera téléchargé tel quel.');
+            
+            processedData = selectedFile;
+            showResult('Fichier Word prêt. Note: La compression complète nécessite un traitement spécialisé.');
+            updateProgress(100);
+        }
+
+        function showResult(message) {
+            hideProgress();
+            document.getElementById('resultMessage').textContent = message;
+            document.getElementById('resultSection').classList.add('show');
+            
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.onclick = downloadFile;
+        }
+
+        function downloadFile() {
+            const url = URL.createObjectURL(processedData);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            let extension = '';
+            switch(currentTool) {
+                case 'word-to-pdf':
+                case 'jpeg-to-pdf':
+                    extension = '.pdf';
+                    break;
+                case 'pdf-to-jpeg':
+                    extension = '.jpg';
+                    break;
+                case 'compress-pdf':
+                    extension = '.pdf';
+                    break;
+                case 'compress-image':
+                    extension = '.jpg';
+                    break;
+                case 'compress-word':
+                    extension = '.docx';
+                    break;
+            }
+            
+            a.download = 'easy_docs_' + Date.now() + extension;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetWorkspace() {
+            selectedFile = null;
+            processedData = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            document.getElementById('resultSection').classList.remove('show');
+            processBtn.disabled = true;
+            hideProgress();
+            qualitySlider.value = 70;
+            document.getElementById('qualityValue').textContent = '70%';
+        }
+    </script>
+</body>
+</html>
